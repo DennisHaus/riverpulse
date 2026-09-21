@@ -1,1237 +1,1577 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+    <title>Swiss River Pulse</title>
 
-  <title>Sediment Flow Simulator</title>
+    <style>
+      :root {
+        --bg: #061218;
+        --panel: rgba(7, 22, 29, 0.91);
+        --panel-border: rgba(152, 232, 218, 0.18);
+        --text: #dff9f2;
+        --muted: #86a9a9;
+        --accent: #65ead2;
+        --accent-2: #75b9ff;
+        --warning: #ffc56e;
+        --danger: #ff8e75;
+      }
 
-  <link
-    rel="stylesheet"
-    href="./style.css"
-  >
+      * {
+        box-sizing: border-box;
+      }
 
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
+      html,
+      body,
+      #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
 
-  <style>
-    .description-tooltip {
-      position: relative;
-      display: inline-block;
-      margin-top: 10px;
-      color: #d5d5d5;
-      border-bottom: 1px dotted #888888;
-      cursor: help;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
+      body {
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
 
-    .description-tooltip-content {
-      position: absolute;
-      z-index: 1000;
-      left: 0;
-      top: calc(100% + 10px);
-
-      width: 320px;
-      max-width: calc(100vw - 48px);
-      max-height: 65vh;
-
-      padding: 15px;
-      overflow-y: auto;
-
-      border: 1px solid #555555;
-      background: #0b0b0b;
-      color: #cfcfcf;
-
-      box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.55);
-
-      font-size: 10px;
-      font-weight: 400;
-      letter-spacing: 0.01em;
-      line-height: 1.5;
-      text-align: left;
-
-      visibility: hidden;
-      opacity: 0;
-      pointer-events: none;
-
-      transition:
-        opacity 120ms ease,
-        visibility 120ms ease;
-    }
-
-    .description-tooltip-content::before {
-      position: absolute;
-      top: -6px;
-      left: 14px;
-
-      width: 10px;
-      height: 10px;
-
-      border-top: 1px solid #555555;
-      border-left: 1px solid #555555;
-
-      background: #0b0b0b;
-      content: "";
-
-      transform: rotate(45deg);
-    }
-
-    .description-tooltip-content strong {
-      display: block;
-      margin-bottom: 4px;
-      color: #ffffff;
-      font-size: 10px;
-      letter-spacing: 0.08em;
-    }
-
-    .description-tooltip-content p {
-      margin: 0 0 11px;
-    }
-
-    .description-tooltip-content p:last-child {
-      margin-bottom: 0;
-    }
-
-    .description-tooltip:hover
-    .description-tooltip-content,
-    .description-tooltip:focus
-    .description-tooltip-content {
-      visibility: visible;
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    @media (max-width: 480px) {
-      .description-tooltip-content {
+      #map {
         position: fixed;
-        left: 15px;
-        right: 15px;
-        top: 120px;
-        width: auto;
-        max-width: none;
-        max-height: 60vh;
+        inset: 0;
       }
 
-      .description-tooltip-content::before {
-        display: none;
+      .panel {
+        position: fixed;
+        z-index: 10;
+        top: 18px;
+        left: 18px;
+        width: 350px;
+        max-width: calc(100vw - 36px);
+        padding: 22px;
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(12, 36, 43, 0.96),
+            rgba(3, 15, 20, 0.9)
+          );
+        box-shadow:
+          0 18px 60px rgba(0, 0, 0, 0.42),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(18px);
       }
-    }
-  </style>
-</head>
-
-<body>
-  <main id="app">
-
-    <section id="viewer"></section>
-
-    <aside id="interface">
-
-      <header>
-        <div class="eyebrow">
-          © ETH Zurich
-        </div>
-
-        <h1>
-          DEBRIS<br>
-          FLOW<br>
-          SIMULATOR
-        </h1>
-
-        <p class="description">
-          A simplified terrain-based model for observing sediment movement
-          across changing topography. – For visualisation purposes only.<br><br>
-
-          Developed by Dennis Häusler, Institute for Landscape and Urban
-          Studies, ETH Zurich, 2026, haeusler@arch.ethz.ch<br>
-
-          assisted by AI (GPT-5.6)<br>
-
-          <span
-            class="description-tooltip"
-            tabindex="0"
-          >
-            DETAILED DESCRIPTION
-
-            <span class="description-tooltip-content">
-
-              <p>
-                <strong>VIEWER FUNCTIONS</strong>
-
-                The viewer displays either a procedurally generated alpine
-                terrain or an imported PLY, STL, or OBJ model. The camera can
-                be rotated, zoomed, and panned with OrbitControls. The source
-                area can be moved with SHIFT + LEFT CLICK. A custom polygonal
-                source area can be drawn with CMD or CTRL + LEFT CLICK.
-              </p>
-
-              <p>
-                <strong>TERRAIN REPRESENTATION</strong>
-
-                The terrain is converted into a regular heightfield. Every
-                horizontal position has one terrain height and one interpolated
-                terrain normal. This makes collision calculations efficient.
-                It also means that overhangs, caves, vertical walls, and
-                multiple terrain layers are not represented by the physics.
-              </p>
-
-              <p>
-                <strong>MACRO-PARTICLES</strong>
-
-                The material volume is divided into macro-particles using:
-
-                source volume × particles per m³
-
-                Each particle represents a volume parcel rather than one
-                physical grain. The equivalent particle radius is calculated
-                from the parcel volume using a spherical-volume approximation.
-                With the default settings, 7,000 m³ and approximately 1,000
-                particles result in approximately 7 m³ per particle.
-              </p>
-
-              <p>
-                <strong>GRAVITY AND TERRAIN SLOPE</strong>
-
-                When a particle is in contact with the terrain, gravity is
-                projected onto the tangent plane of the terrain. This produces
-                an explicit downhill acceleration. The normal component of
-                gravity is handled by the terrain contact constraint.
-              </p>
-
-              <p>
-                <strong>STATIC AND KINETIC FRICTION</strong>
-
-                Static friction prevents particles from creeping on slopes
-                where the downhill driving force is below the static threshold.
-                Once motion begins, kinetic terrain friction reduces the
-                tangential velocity. This creates a clearer distinction between
-                resting material and sliding material.
-              </p>
-
-              <p>
-                <strong>FLOW DRAG</strong>
-
-                A velocity-dependent quadratic drag is applied to particles
-                moving along the terrain. The drag acceleration increases with
-                the square of the tangential velocity. This limits unrealistically
-                high velocities without requiring a full fluid solver.
-              </p>
-
-              <p>
-                <strong>PARTICLE CONTACT</strong>
-
-                Nearby particles are found with a spatial hash. Overlapping
-                particles are pushed apart. Relative normal velocity is
-                corrected, tangential contact motion is reduced by material
-                friction, and contact damping reduces jitter and noisy sliding.
-              </p>
-
-              <p>
-                <strong>COHESION</strong>
-
-                Particle cohesion attracts nearby particles only when they are
-                farther apart than a preferred rest distance. Particles are not
-                artificially attracted when they are already in contact. This
-                reduces excessive clumping while preserving a coherent flow.
-              </p>
-
-              <p>
-                <strong>COLOUR MODES</strong>
-
-                VELOCITY colours particles according to their current speed.
-                DISTANCE TRAVELED colours them according to accumulated travel
-                distance. FLOW THICKNESS estimates local volume per terrain
-                cell and colours particles according to that local thickness.
-              </p>
-
-              <p>
-                <strong>SIMULATION CACHE</strong>
-
-                Periodic copies of particle positions, velocities, and traveled
-                distances are stored in memory. The timeline can be used to
-                review cached frames. It does not recompute the simulation
-                backward; it restores previously recorded states.
-              </p>
-
-              <p>
-                <strong>WHAT THIS IS NOT</strong>
-
-                This is not an MPM solver, FLIP solver, PIC solver, SPH solver,
-                or complete DEM solver. It does not solve pressure, fluid
-                incompressibility, stress tensors, pore-water pressure,
-                erosion, deposition, angular particle rotation, or multiple
-                material densities.
-              </p>
-
-              <p>
-                <strong>RELIABILITY</strong>
-
-                The simulation is intended for qualitative visualization,
-                design exploration, and comparison of parameter settings. It
-                should not be used for engineering design, hazard prediction,
-                structural loading, legal analysis, or quantitative forecasting
-                of a real debris-flow event.
-              </p>
-
-            </span>
-          </span>
-        </p>
-      </header>
-
-
-      <section class="controls">
-
-        <details>
-          <summary>MATERIAL</summary>
-
-          <div class="details-body">
-
-            <div class="control">
-              <div class="label-row">
-                <label for="materialFriction">
-                  MATERIAL FRICTION
-                </label>
-
-                <input
-                  id="materialFrictionNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value="0.35"
-                >
-              </div>
-
-              <input
-                id="materialFriction"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value="0.35"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="terrainFriction">
-                  KINETIC TERRAIN FRICTION
-                </label>
-
-                <input
-                  id="terrainFrictionNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value="0.65"
-                >
-              </div>
-
-              <input
-                id="terrainFriction"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value="0.65"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="staticFrictionFactor">
-                  STATIC FRICTION FACTOR ×
-                </label>
-
-                <input
-                  id="staticFrictionFactorNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="1"
-                  max="2"
-                  step="0.01"
-                  value="1.15"
-                >
-              </div>
-
-              <input
-                id="staticFrictionFactor"
-                type="range"
-                min="1"
-                max="2"
-                step="0.01"
-                value="1.15"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="particleCohesion">
-                  PARTICLE COHESION
-                </label>
-
-                <input
-                  id="particleCohesionNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value="0.35"
-                >
-              </div>
-
-              <input
-                id="particleCohesion"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value="0.35"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="cohesionRestDistanceFactor">
-                  COHESION REST DISTANCE × RADIUS
-                </label>
-
-                <input
-                  id="cohesionRestDistanceFactorNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="2"
-                  max="4"
-                  step="0.05"
-                  value="2.1"
-                >
-              </div>
-
-              <input
-                id="cohesionRestDistanceFactor"
-                type="range"
-                min="2"
-                max="4"
-                step="0.05"
-                value="2.1"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="contactDamping">
-                  CONTACT DAMPING
-                </label>
-
-                <input
-                  id="contactDampingNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value="0.15"
-                >
-              </div>
-
-              <input
-                id="contactDamping"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value="0.15"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="flowDragLength">
-                  FLOW DRAG LENGTH m
-                </label>
-
-                <input
-                  id="flowDragLengthNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="20"
-                  max="500"
-                  step="5"
-                  value="120"
-                >
-              </div>
-
-              <input
-                id="flowDragLength"
-                type="range"
-                min="20"
-                max="500"
-                step="5"
-                value="120"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="startVelocity">
-                  START VELOCITY m/s
-                </label>
-
-                <input
-                  id="startVelocityNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value="0"
-                >
-              </div>
-
-              <input
-                id="startVelocity"
-                type="range"
-                min="0"
-                max="10"
-                step="0.1"
-                value="0"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="simulationSpeed">
-                  SIMULATION SPEED ×
-                </label>
-
-                <input
-                  id="simulationSpeedNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0.25"
-                  max="5"
-                  step="0.25"
-                  value="1"
-                >
-              </div>
-
-              <input
-                id="simulationSpeed"
-                type="range"
-                min="0.25"
-                max="5"
-                step="0.25"
-                value="1"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="startDirectionMode">
-                  START DIRECTION
-                </label>
-
-                <select id="startDirectionMode">
-                  <option value="downhill">
-                    DOWNHILL
-                  </option>
-
-                  <option value="fixed">
-                    FIXED HEADING
-                  </option>
-
-                  <option value="radial">
-                    RADIAL FROM SOURCE
-                  </option>
-
-                  <option value="vector">
-                    USER VECTOR
-                  </option>
-                </select>
-              </div>
-            </div>
-
-
-            <div
-              id="fixedDirectionControl"
-              class="control hidden"
-            >
-              <div class="label-row">
-                <label for="directionAngle">
-                  HEADING °
-                </label>
-
-                <input
-                  id="directionAngleNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="-180"
-                  max="180"
-                  step="1"
-                  value="0"
-                >
-              </div>
-
-              <input
-                id="directionAngle"
-                type="range"
-                min="-180"
-                max="180"
-                step="1"
-                value="0"
-              >
-            </div>
-
-
-            <div
-              id="userDirectionXControl"
-              class="control hidden"
-            >
-              <div class="label-row">
-                <label for="directionX">
-                  VECTOR X
-                </label>
-
-                <input
-                  id="directionXNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="-1"
-                  max="1"
-                  step="0.01"
-                  value="0"
-                >
-              </div>
-
-              <input
-                id="directionX"
-                type="range"
-                min="-1"
-                max="1"
-                step="0.01"
-                value="0"
-              >
-            </div>
-
-
-            <div
-              id="userDirectionZControl"
-              class="control hidden"
-            >
-              <div class="label-row">
-                <label for="directionZ">
-                  VECTOR Z
-                </label>
-
-                <input
-                  id="directionZNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="-1"
-                  max="1"
-                  step="0.01"
-                  value="1"
-                >
-              </div>
-
-              <input
-                id="directionZ"
-                type="range"
-                min="-1"
-                max="1"
-                step="0.01"
-                value="1"
-              >
-            </div>
-
-          </div>
-        </details>
-
-
-        <details>
-          <summary>TERRAIN</summary>
-
-          <div class="details-body">
-
-            <div class="control">
-              <div class="label-row">
-                <label for="terrainResolution">
-                  TERRAIN RESOLUTION
-                </label>
-
-                <input
-                  id="terrainResolutionNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="64"
-                  max="768"
-                  step="1"
-                  value="256"
-                >
-              </div>
-
-              <input
-                id="terrainResolution"
-                type="range"
-                min="64"
-                max="768"
-                step="1"
-                value="256"
-              >
-            </div>
-
-          </div>
-        </details>
-
-
-        <details>
-          <summary>MODEL SCALE</summary>
-
-          <div class="details-body">
-
-            <div class="control">
-              <div class="label-row">
-                <label for="modelScale">
-                  MODEL SCALE ×
-                </label>
-
-                <input
-                  id="modelScaleNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0.1"
-                  max="10"
-                  step="0.1"
-                  value="1"
-                >
-              </div>
-
-              <input
-                id="modelScale"
-                type="range"
-                min="0.1"
-                max="10"
-                step="0.1"
-                value="1"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="metersPerModelUnit">
-                  METRES / MODEL UNIT
-                </label>
-
-                <input
-                  id="metersPerModelUnitNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0.01"
-                  max="100"
-                  step="0.01"
-                  value="1"
-                >
-              </div>
-
-              <input
-                id="metersPerModelUnit"
-                type="range"
-                min="0.01"
-                max="100"
-                step="0.01"
-                value="1"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="verticalExaggeration">
-                  VERTICAL SCALE ×
-                </label>
-
-                <input
-                  id="verticalScaleNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0.1"
-                  max="10"
-                  step="0.1"
-                  value="1"
-                >
-              </div>
-
-              <input
-                id="verticalExaggeration"
-                type="range"
-                min="0.1"
-                max="10"
-                step="0.1"
-                value="1"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="depthScale">
-                  Z AXIS SCALE ×
-                </label>
-
-                <input
-                  id="depthScaleNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0.1"
-                  max="10"
-                  step="0.1"
-                  value="1"
-                >
-              </div>
-
-              <input
-                id="depthScale"
-                type="range"
-                min="0.1"
-                max="10"
-                step="0.1"
-                value="1"
-              >
-            </div>
-
-          </div>
-        </details>
-
-
-        <details>
-          <summary>SOURCE MATERIAL</summary>
-
-          <div class="details-body">
-
-            <div class="control">
-              <div class="label-row">
-                <label for="releaseShapeMode">
-                  RELEASE SHAPE
-                </label>
-
-                <select id="releaseShapeMode">
-                  <option value="rectangle">
-                    SQUARE AREA
-                  </option>
-
-                  <option value="polygon">
-                    CUSTOM POLYGON
-                  </option>
-                </select>
-              </div>
-            </div>
-
-
-            <div
-              id="rectangleAreaControl"
-              class="control"
-            >
-              <div class="label-row">
-                <label for="sourceArea">
-                  RELEASE AREA m²
-                </label>
-
-                <input
-                  id="sourceAreaNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="100"
-                  max="100000"
-                  step="100"
-                  value="3500"
-                >
-              </div>
-
-              <input
-                id="sourceArea"
-                type="range"
-                min="100"
-                max="100000"
-                step="100"
-                value="3500"
-              >
-            </div>
-
-
-            <div
-              id="customShapeControl"
-              class="shape-control hidden"
-            >
-              <button
-                id="drawReleaseShapeButton"
-                type="button"
-              >
-                DRAW RELEASE SHAPE
-              </button>
-
-              <button
-                id="clearReleaseShapeButton"
-                type="button"
-              >
-                CLEAR CUSTOM SHAPE
-              </button>
-
-              <div id="drawShapeHint">
-                Hold CMD or CTRL and left-click terrain points.
-                Press ENTER to finish.
-              </div>
-
-              <div id="releaseAreaReadout">
-                NO CUSTOM SHAPE
-              </div>
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="sourceVolume">
-                  START VOLUME m³
-                </label>
-
-                <input
-                  id="sourceVolumeNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="1000"
-                  max="500000"
-                  step="1000"
-                  value="7000"
-                >
-              </div>
-
-              <input
-                id="sourceVolume"
-                type="range"
-                min="1000"
-                max="500000"
-                step="1000"
-                value="7000"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="particleDensity">
-                  PARTICLES / m³
-                </label>
-
-                <input
-                  id="particleDensityNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0.001"
-                  max="10"
-                  step="0.000001"
-                  value="0.142857"
-                >
-              </div>
-
-              <input
-                id="particleDensity"
-                type="range"
-                min="0.001"
-                max="10"
-                step="0.000001"
-                value="0.142857"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="colorMode">
-                  COLOR BY
-                </label>
-
-                <select id="colorMode">
-                  <option value="velocity">
-                    VELOCITY
-                  </option>
-
-                  <option value="distance">
-                    DISTANCE TRAVELED
-                  </option>
-
-                  <option value="thickness">
-                    FLOW THICKNESS
-                  </option>
-                </select>
-              </div>
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="particleSize">
-                  PARTICLE DISPLAY SCALE ×
-                </label>
-
-                <input
-                  id="particleSizeNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="0.25"
-                  max="3"
-                  step="0.05"
-                  value="2"
-                >
-              </div>
-
-              <input
-                id="particleSize"
-                type="range"
-                min="0.25"
-                max="3"
-                step="0.05"
-                value="2"
-              >
-            </div>
-
-          </div>
-        </details>
-
-
-        <details>
-          <summary>MODEL ORIENTATION</summary>
-
-          <div class="details-body">
-
-            <div class="control">
-              <div class="label-row">
-                <label for="rotationX">
-                  ROTATE X °
-                </label>
-
-                <input
-                  id="rotationXNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="-180"
-                  max="180"
-                  step="45"
-                  value="0"
-                >
-              </div>
-
-              <input
-                id="rotationX"
-                type="range"
-                min="-180"
-                max="180"
-                step="45"
-                value="0"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="rotationY">
-                  ROTATE Y °
-                </label>
-
-                <input
-                  id="rotationYNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="-180"
-                  max="180"
-                  step="45"
-                  value="0"
-                >
-              </div>
-
-              <input
-                id="rotationY"
-                type="range"
-                min="-180"
-                max="180"
-                step="45"
-                value="0"
-              >
-            </div>
-
-
-            <div class="control">
-              <div class="label-row">
-                <label for="rotationZ">
-                  ROTATE Z °
-                </label>
-
-                <input
-                  id="rotationZNumber"
-                  class="numeric-input"
-                  type="number"
-                  min="-180"
-                  max="180"
-                  step="45"
-                  value="0"
-                >
-              </div>
-
-              <input
-                id="rotationZ"
-                type="range"
-                min="-180"
-                max="180"
-                step="45"
-                value="0"
-              >
-            </div>
-
-          </div>
-        </details>
-
-
-        <div class="button-row">
-          <button
-            id="resetOrientationButton"
-            type="button"
-          >
-            RESET ROTATION
-          </button>
-        </div>
-
-
-        <div class="button-row">
-          <button
-            id="playButton"
-            type="button"
-          >
-            PLAY
-          </button>
-
-          <button
-            id="resetButton"
-            type="button"
-          >
-            RESET
-          </button>
-        </div>
-
-
-        <div class="button-row secondary">
-          <button
-            id="addButton"
-            type="button"
-          >
-            ADD 1000 m³
-          </button>
-
-          <button
-            id="terrainButton"
-            type="button"
-          >
-            NEW TERRAIN
-          </button>
-        </div>
-
-      </section>
-
-
-      <div id="dropZone">
-        DROP 3D TERRAIN HERE
-        <span>PLY / STL / OBJ</span>
-      </div>
-
-      <input
-        id="modelFileInput"
-        type="file"
-        accept=".ply,.stl,.obj"
-        hidden
-      >
-
-      <button
-        id="chooseModelButton"
-        class="file-button"
-        type="button"
-      >
-        CHOOSE 3D MODEL
-      </button>
-
-
-      <div id="sourceHint">
-        SHIFT + LEFT CLICK TO MOVE SOURCE<br>
-        CMD / CTRL + LEFT CLICK TO DRAW CUSTOM SHAPE
-      </div>
-
-
-      <div
-        id="timelineWrap"
-        class="timeline hidden"
-      >
-        <div class="timeline-heading">
-          <span>SIMULATION CACHE</span>
-
-          <span id="timelineReadout">
-            0.00 s
-          </span>
-        </div>
 
+      .eyebrow {
+        margin-bottom: 12px;
+        color: var(--accent);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        color: #ecfffa;
+        font-size: 42px;
+        font-weight: 500;
+        letter-spacing: -0.075em;
+        line-height: 0.9;
+      }
+
+      h1 em {
+        color: var(--accent);
+        font-style: normal;
+      }
+
+      .intro {
+        margin: 19px 0 22px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 7px;
+        color: #a8c9c7;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .search-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      input[type="text"] {
+        min-width: 0;
+        flex: 1;
+        border: 1px solid rgba(155, 236, 220, 0.2);
+        border-radius: 8px;
+        outline: none;
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+        padding: 11px 12px;
+      }
+
+      input[type="text"]:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(101, 234, 210, 0.1);
+      }
+
+      button {
+        border: 1px solid rgba(101, 234, 210, 0.35);
+        border-radius: 8px;
+        cursor: pointer;
+        background: rgba(101, 234, 210, 0.13);
+        color: var(--accent);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 0 14px;
+        transition:
+          background 160ms ease,
+          border-color 160ms ease,
+          transform 160ms ease;
+      }
+
+      button:hover {
+        border-color: var(--accent);
+        background: rgba(101, 234, 210, 0.23);
+        transform: translateY(-1px);
+      }
+
+      button.secondary {
+        border-color: rgba(135, 180, 255, 0.3);
+        background: rgba(135, 180, 255, 0.1);
+        color: var(--accent-2);
+      }
+
+      .river-meta {
+        min-height: 40px;
+        margin-top: 11px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .river-meta strong {
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .rule {
+        height: 1px;
+        margin: 20px 0;
+        background: rgba(145, 224, 211, 0.13);
+      }
+
+      .control-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .control-line label {
+        margin: 0;
+      }
+
+      .control-value {
+        color: var(--accent);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 15px;
+      }
+
+      .button-row button {
+        min-height: 36px;
+        flex: 1;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .stat {
+        min-height: 65px;
+        padding: 11px;
+        border: 1px solid rgba(145, 224, 211, 0.12);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .stat-label {
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        color: var(--text);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 14px;
+      }
+
+      .status {
+        min-height: 32px;
+        margin-top: 17px;
+        color: var(--muted);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .status.loading {
+        color: var(--warning);
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .notice {
+        margin-top: 13px;
+        color: #6f9292;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .legend {
+        position: fixed;
+        z-index: 5;
+        right: 18px;
+        bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 12px;
+        border: 1px solid rgba(145, 224, 211, 0.15);
+        border-radius: 9px;
+        background: rgba(5, 20, 26, 0.8);
+        color: var(--muted);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 10px;
+        backdrop-filter: blur(10px);
+      }
+
+      .legend-gradient {
+        width: 100px;
+        height: 5px;
+        border-radius: 99px;
+        background: linear-gradient(
+          90deg,
+          #5be5d2,
+          #76d9d1,
+          #d7d879,
+          #ff9676
+        );
+      }
+
+      .map-caption {
+        position: fixed;
+        z-index: 5;
+        right: 18px;
+        top: 18px;
+        color: rgba(203, 238, 232, 0.64);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .maplibregl-ctrl-group {
+        overflow: hidden;
+        border: 1px solid rgba(145, 224, 211, 0.2) !important;
+        background: rgba(5, 20, 26, 0.8) !important;
+      }
+
+      .maplibregl-ctrl button {
+        background-color: transparent !important;
+      }
+
+      .maplibregl-ctrl-attrib {
+        background: rgba(5, 20, 26, 0.72) !important;
+        color: #9ab7b5 !important;
+      }
+
+      .maplibregl-ctrl-attrib a {
+        color: #b6e9df !important;
+      }
+
+      @media (max-width: 700px) {
+        .panel {
+          top: 10px;
+          left: 10px;
+          width: calc(100vw - 20px);
+          padding: 17px;
+        }
+
+        h1 {
+          font-size: 34px;
+        }
+
+        .intro {
+          margin: 15px 0 18px;
+        }
+
+        .map-caption {
+          display: none;
+        }
+
+        .legend {
+          right: 10px;
+          bottom: 10px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+
+    <div class="map-caption">Swiss rivers / hydrological simulation</div>
+
+    <section class="panel">
+      <div class="eyebrow">Swiss hydrology / first build</div>
+
+      <h1>River<br /><em>Pulse</em></h1>
+
+      <p class="intro">
+        Select a river and watch its water rise and drain through a simulated
+        seasonal cycle. River geometry and sub-catchment data are requested
+        from Swiss federal geoservices.
+      </p>
+
+      <label for="riverInput">River</label>
+
+      <div class="search-row">
         <input
-          id="timeline"
-          type="range"
-          min="0"
-          max="0"
-          step="1"
-          value="0"
-        >
+          id="riverInput"
+          type="text"
+          list="riverNames"
+          value="Aare"
+          autocomplete="off"
+          placeholder="Try Aare, Rhône, Reuss..."
+        />
+        <button id="loadButton">Load</button>
+      </div>
 
-        <div class="timeline-note">
-          Drag to review cached positions.
-          PLAY resumes from the selected frame.
+      <datalist id="riverNames"></datalist>
+
+      <div id="riverMeta" class="river-meta">
+        Select a river to begin.
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="control-line">
+        <label for="phaseInput">Seasonal position</label>
+        <span id="dateValue" class="control-value">—</span>
+      </div>
+
+      <input id="phaseInput" type="range" min="0" max="1" step="0.001" value="0.42" />
+
+      <div class="button-row">
+        <button id="playButton">Pause</button>
+        <button id="resetButton" class="secondary">Reset view</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Estimated flow</div>
+          <div id="flowValue" class="stat-value">—</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">River reaches</div>
+          <div id="reachValue" class="stat-value">—</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">Sub-catchment</div>
+          <div id="catchmentValue" class="stat-value">—</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">FOEN stations</div>
+          <div id="stationValue" class="stat-value">—</div>
         </div>
       </div>
 
+      <div id="status" class="status loading">
+        Initialising map…
+      </div>
 
-      <footer>
-        <span id="status">
-          PAUSED
-        </span>
+      <div class="notice">
+        Flow values are currently visualisation estimates. The live FOEN/LINDAS
+        data adapter will replace them in the next version.
+      </div>
+    </section>
 
-        <span id="particleCountStatus">
-          1,000 particles
-        </span>
-      </footer>
+    <div class="legend">
+      <span>LOW</span>
+      <div class="legend-gradient"></div>
+      <span>HIGH</span>
+    </div>
 
-    </aside>
+    <script type="module">
+      import maplibregl from "https://esm.sh/maplibre-gl@5.6.2";
+      import { MapboxOverlay } from "https://esm.sh/@deck.gl/mapbox@9.1.12?bundle";
+      import {
+        GeoJsonLayer,
+        LineLayer,
+        PolygonLayer,
+        ScatterplotLayer,
+      } from "https://esm.sh/@deck.gl/layers@9.1.12?bundle";
 
-  </main>
+      /*
+       * Official GeoAdmin layer names.
+       */
+      const RIVER_LAYER =
+        "ch.swisstopo.swisstlm3d-gewaessernetz";
 
-  <script
-    type="module"
-    src="./app.js"
-  ></script>
-</body>
+      const CATCHMENT_LAYER =
+        "ch.bafu.wasser-teileinzugsgebiete_40";
+
+      const STATION_LAYER =
+        "ch.bafu.hydrologie-hydromessstationen";
+
+      const FIND_ENDPOINT =
+        "https://api3.geo.admin.ch/rest/services/ech/MapServer/find";
+
+      const IDENTIFY_ENDPOINT =
+        "https://api3.geo.admin.ch/rest/services/ech/MapServer/identify";
+
+      /*
+       * Approximate base flows are only used for the visual simulation.
+       * These will eventually be replaced with FOEN/LINDAS observations
+       * and MQ-GWN-CH values.
+       */
+      const RIVERS = [
+        {
+          name: "Aare",
+          query: "Aare",
+          meanFlow: 560,
+          hint: [7.99, 47.45],
+          region: "Bern / Aargau",
+        },
+        {
+          name: "Rhein",
+          query: "Rhein",
+          meanFlow: 1_050,
+          hint: [7.59, 47.59],
+          region: "Basel",
+        },
+        {
+          name: "Rhône",
+          query: "Rhône",
+          meanFlow: 190,
+          hint: [6.13, 46.21],
+          region: "Geneva",
+        },
+        {
+          name: "Reuss",
+          query: "Reuss",
+          meanFlow: 140,
+          hint: [8.61, 47.18],
+          region: "Lucerne / Aargau",
+        },
+        {
+          name: "Limmat",
+          query: "Limmat",
+          meanFlow: 100,
+          hint: [8.32, 47.42],
+          region: "Zurich / Aargau",
+        },
+        {
+          name: "Ticino",
+          query: "Ticino",
+          meanFlow: 110,
+          hint: [8.95, 45.91],
+          region: "Ticino",
+        },
+        {
+          name: "Inn",
+          query: "Inn",
+          meanFlow: 55,
+          hint: [10.06, 46.47],
+          region: "Engadine",
+        },
+        {
+          name: "Thur",
+          query: "Thur",
+          meanFlow: 45,
+          hint: [9.28, 47.50],
+          region: "Eastern Switzerland",
+        },
+        {
+          name: "Doubs",
+          query: "Doubs",
+          meanFlow: 35,
+          hint: [6.97, 47.38],
+          region: "Jura",
+        },
+        {
+          name: "Saane",
+          query: "Saane",
+          meanFlow: 55,
+          hint: [7.09, 46.83],
+          region: "Fribourg",
+        },
+        {
+          name: "Emme",
+          query: "Emme",
+          meanFlow: 30,
+          hint: [7.65, 47.08],
+          region: "Bern",
+        },
+        {
+          name: "Linth",
+          query: "Linth",
+          meanFlow: 45,
+          hint: [9.06, 47.15],
+          region: "Glarus / St. Gallen",
+        },
+        {
+          name: "Birs",
+          query: "Birs",
+          meanFlow: 20,
+          hint: [7.60, 47.52],
+          region: "Basel-Landschaft",
+        },
+        {
+          name: "Broye",
+          query: "Broye",
+          meanFlow: 20,
+          hint: [6.94, 46.82],
+          region: "Vaud / Fribourg",
+        },
+        {
+          name: "Arve",
+          query: "Arve",
+          meanFlow: 80,
+          hint: [6.14, 46.20],
+          region: "Geneva",
+        },
+        {
+          name: "Kander",
+          query: "Kander",
+          meanFlow: 30,
+          hint: [7.67, 46.58],
+          region: "Bernese Oberland",
+        },
+        {
+          name: "Simme",
+          query: "Simme",
+          meanFlow: 25,
+          hint: [7.54, 46.49],
+          region: "Bernese Oberland",
+        },
+        {
+          name: "Sense",
+          query: "Sense",
+          meanFlow: 18,
+          hint: [7.28, 46.90],
+          region: "Bern / Fribourg",
+        },
+        {
+          name: "Sihl",
+          query: "Sihl",
+          meanFlow: 15,
+          hint: [8.48, 47.34],
+          region: "Zurich",
+        },
+        {
+          name: "Glatt",
+          query: "Glatt",
+          meanFlow: 16,
+          hint: [8.60, 47.42],
+          region: "Zurich",
+        },
+        {
+          name: "Maggia",
+          query: "Maggia",
+          meanFlow: 35,
+          hint: [8.74, 46.17],
+          region: "Ticino",
+        },
+        {
+          name: "Moesa",
+          query: "Moesa",
+          meanFlow: 22,
+          hint: [9.05, 46.24],
+          region: "Graubünden",
+        },
+        {
+          name: "Landquart",
+          query: "Landquart",
+          meanFlow: 25,
+          hint: [9.57, 46.97],
+          region: "Graubünden",
+        },
+        {
+          name: "Töss",
+          query: "Töss",
+          meanFlow: 17,
+          hint: [8.72, 47.48],
+          region: "Zurich",
+        },
+        {
+          name: "Venoge",
+          query: "Venoge",
+          meanFlow: 12,
+          hint: [6.51, 46.52],
+          region: "Vaud",
+        },
+        {
+          name: "Orbe",
+          query: "Orbe",
+          meanFlow: 18,
+          hint: [6.56, 46.72],
+          region: "Vaud",
+        },
+      ];
+
+      const state = {
+        river: null,
+        features: [],
+        catchment: null,
+        stations: [],
+        point: null,
+        phase: 0.42,
+        playing: true,
+      };
+
+      let overlay = null;
+      let loadSequence = 0;
+      let lastFrameTime = performance.now();
+      let lastDrawTime = 0;
+
+      const riverInput = document.querySelector("#riverInput");
+      const loadButton = document.querySelector("#loadButton");
+      const riverMeta = document.querySelector("#riverMeta");
+      const phaseInput = document.querySelector("#phaseInput");
+      const dateValue = document.querySelector("#dateValue");
+      const playButton = document.querySelector("#playButton");
+      const resetButton = document.querySelector("#resetButton");
+      const flowValue = document.querySelector("#flowValue");
+      const reachValue = document.querySelector("#reachValue");
+      const catchmentValue = document.querySelector("#catchmentValue");
+      const stationValue = document.querySelector("#stationValue");
+      const status = document.querySelector("#status");
+      const riverNames = document.querySelector("#riverNames");
+
+      for (const river of RIVERS) {
+        const option = document.createElement("option");
+        option.value = river.name;
+        option.label = river.region;
+        riverNames.appendChild(option);
+      }
+
+      function setStatus(message, type = "") {
+        status.textContent = message;
+        status.className = `status ${type}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function formatNumber(value, decimals = 0) {
+        return new Intl.NumberFormat("en-CH", {
+          maximumFractionDigits: decimals,
+          minimumFractionDigits: decimals,
+        }).format(value);
+      }
+
+      function formatDate(phase) {
+        const start = Date.UTC(2025, 0, 1);
+        const milliseconds = 365.25 * 24 * 60 * 60 * 1000;
+        const date = new Date(start + phase * milliseconds);
+
+        return new Intl.DateTimeFormat("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        }).format(date);
+      }
+
+      function selectedRiverMetadata(rawName) {
+        const input = String(rawName || "").trim();
+
+        const known = RIVERS.find(
+          (river) =>
+            river.name.toLocaleLowerCase() === input.toLocaleLowerCase() ||
+            river.query.toLocaleLowerCase() === input.toLocaleLowerCase(),
+        );
+
+        if (known) {
+          return { ...known };
+        }
+
+        return {
+          name: input,
+          query: input,
+          meanFlow: 25,
+          hint: null,
+          region: "GeoAdmin search",
+        };
+      }
+
+      function stripCoordinates(value) {
+        if (!Array.isArray(value)) return value;
+
+        if (typeof value[0] === "number") {
+          return value.slice(0, 2);
+        }
+
+        return value.map(stripCoordinates);
+      }
+
+      function normaliseGeometry(geometry) {
+        if (!geometry) return null;
+
+        if (geometry.type && geometry.coordinates) {
+          return {
+            type: geometry.type,
+            coordinates: stripCoordinates(geometry.coordinates),
+          };
+        }
+
+        if (geometry.paths) {
+          return {
+            type: geometry.paths.length === 1 ? "LineString" : "MultiLineString",
+            coordinates: stripCoordinates(geometry.paths),
+          };
+        }
+
+        if (geometry.rings) {
+          return {
+            type: "Polygon",
+            coordinates: stripCoordinates(geometry.rings),
+          };
+        }
+
+        if (
+          Number.isFinite(geometry.x) &&
+          Number.isFinite(geometry.y)
+        ) {
+          return {
+            type: "Point",
+            coordinates: [geometry.x, geometry.y],
+          };
+        }
+
+        return null;
+      }
+
+      function resultToFeature(result) {
+        const geometry = normaliseGeometry(result.geometry);
+
+        if (!geometry) return null;
+
+        return {
+          type: "Feature",
+          geometry,
+          properties: {
+            ...(result.attributes || {}),
+            featureId: result.featureId,
+          },
+        };
+      }
+
+      function geometryLines(geometry) {
+        if (!geometry) return [];
+
+        if (geometry.type === "LineString") {
+          return [geometry.coordinates];
+        }
+
+        if (geometry.type === "MultiLineString") {
+          return geometry.coordinates;
+        }
+
+        return [];
+      }
+
+      function allRiverLines(features) {
+        return features.flatMap((feature) =>
+          geometryLines(feature.geometry),
+        );
+      }
+
+      function simplifyLine(line, maximumPoints = 90) {
+        if (!Array.isArray(line) || line.length <= maximumPoints) {
+          return line;
+        }
+
+        const step = Math.ceil(line.length / maximumPoints);
+        const result = line.filter((_, index) => index % step === 0);
+
+        const last = line[line.length - 1];
+
+        if (result[result.length - 1] !== last) {
+          result.push(last);
+        }
+
+        return result;
+      }
+
+      function representativePoint(features, hint = null) {
+        const lines = allRiverLines(features);
+        const points = lines.flat();
+
+        if (!points.length) return null;
+
+        if (hint) {
+          let nearest = points[0];
+          let nearestDistance = Infinity;
+
+          for (const point of points) {
+            const dx = point[0] - hint[0];
+            const dy = point[1] - hint[1];
+            const distance = dx * dx + dy * dy;
+
+            if (distance < nearestDistance) {
+              nearestDistance = distance;
+              nearest = point;
+            }
+          }
+
+          return nearest;
+        }
+
+        let longestLine = lines[0];
+
+        for (const line of lines) {
+          if (line.length > longestLine.length) {
+            longestLine = line;
+          }
+        }
+
+        return longestLine[Math.floor(longestLine.length / 2)];
+      }
+
+      function boundsForFeatures(features) {
+        const lines = allRiverLines(features);
+        const points = lines.flat();
+
+        if (!points.length) return null;
+
+        let minLon = Infinity;
+        let minLat = Infinity;
+        let maxLon = -Infinity;
+        let maxLat = -Infinity;
+
+        for (const point of points) {
+          minLon = Math.min(minLon, point[0]);
+          minLat = Math.min(minLat, point[1]);
+          maxLon = Math.max(maxLon, point[0]);
+          maxLat = Math.max(maxLat, point[1]);
+        }
+
+        return [
+          [minLon, minLat],
+          [maxLon, maxLat],
+        ];
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        return response.json();
+      }
+
+      async function fetchRiverGeometry(metadata) {
+        const params = new URLSearchParams({
+          layer: RIVER_LAYER,
+          searchText: metadata.query,
+          searchField: "name",
+          contains: "false",
+          returnGeometry: "true",
+          geometryFormat: "geojson",
+          sr: "4326",
+          lang: "en",
+          f: "json",
+        });
+
+        let data = await fetchJson(`${FIND_ENDPOINT}?${params}`);
+        let results = data.results || [];
+
+        /*
+         * A second substring search helps with minor spelling and
+         * localisation differences.
+         */
+        if (!results.length) {
+          const fallbackParams = new URLSearchParams({
+            layer: RIVER_LAYER,
+            searchText: metadata.query,
+            searchField: "name",
+            contains: "true",
+            returnGeometry: "true",
+            geometryFormat: "geojson",
+            sr: "4326",
+            lang: "en",
+            f: "json",
+          });
+
+          data = await fetchJson(`${FIND_ENDPOINT}?${fallbackParams}`);
+          results = data.results || [];
+        }
+
+        return results
+          .map(resultToFeature)
+          .filter(
+            (feature) =>
+              feature &&
+              ["LineString", "MultiLineString"].includes(
+                feature.geometry.type,
+              ),
+          );
+      }
+
+      async function fetchCatchment(point) {
+        if (!point) return null;
+
+        const params = new URLSearchParams({
+          geometry: `${point[0]},${point[1]}`,
+          geometryType: "esriGeometryPoint",
+          layers: `all:${CATCHMENT_LAYER}`,
+          tolerance: "0",
+          returnGeometry: "true",
+          geometryFormat: "geojson",
+          sr: "4326",
+          lang: "en",
+          limit: "10",
+          f: "json",
+        });
+
+        const data = await fetchJson(`${IDENTIFY_ENDPOINT}?${params}`);
+        const results = data.results || [];
+
+        const features = results
+          .map(resultToFeature)
+          .filter(
+            (feature) =>
+              feature &&
+              ["Polygon", "MultiPolygon"].includes(
+                feature.geometry.type,
+              ),
+          );
+
+        if (!features.length) return null;
+
+        return {
+          type: "FeatureCollection",
+          features: [features[0]],
+        };
+      }
+
+      async function fetchStations() {
+        const params = new URLSearchParams({
+          geometry: "5.75,45.65,10.65,47.95",
+          geometryType: "esriGeometryEnvelope",
+          layers: `all:${STATION_LAYER}`,
+          tolerance: "0",
+          returnGeometry: "true",
+          geometryFormat: "geojson",
+          sr: "4326",
+          lang: "en",
+          limit: "200",
+          f: "json",
+        });
+
+        const data = await fetchJson(`${IDENTIFY_ENDPOINT}?${params}`);
+        const results = data.results || [];
+        const seen = new Set();
+
+        return results
+          .map((result) => {
+            const geometry = normaliseGeometry(result.geometry);
+
+            if (!geometry || geometry.type !== "Point") {
+              return null;
+            }
+
+            const id = String(result.featureId ?? geometry.coordinates.join(","));
+
+            if (seen.has(id)) return null;
+            seen.add(id);
+
+            return {
+              ...result.attributes,
+              stationId: id,
+              position: geometry.coordinates,
+              kind: "station",
+            };
+          })
+          .filter(Boolean);
+      }
+
+      function seasonalFlow() {
+        if (!state.river) return 0;
+
+        const angle = state.phase * Math.PI * 2;
+
+        const seasonalMultiplier =
+          0.84 +
+          0.22 * Math.sin(angle - 0.8) +
+          0.05 * Math.sin(angle * 2.0);
+
+        return Math.max(
+          0.5,
+          state.river.meanFlow * seasonalMultiplier,
+        );
+      }
+
+      function heightForFlow(flow) {
+        const normalised =
+          Math.log1p(Math.max(flow, 0)) / Math.log1p(2_000);
+
+        return 70 + clamp(normalised, 0, 1.25) * 850;
+      }
+
+      function colourForFlow(flow) {
+        const normalised = clamp(
+          Math.log1p(Math.max(flow, 0)) / Math.log1p(2_000),
+          0,
+          1,
+        );
+
+        return [
+          Math.round(78 + 180 * normalised),
+          Math.round(230 - 80 * normalised),
+          Math.round(208 - 55 * normalised),
+          225,
+        ];
+      }
+
+      function buildWallData() {
+        const currentFlow = seasonalFlow();
+        const walls = [];
+
+        const lines = allRiverLines(state.features).map((line) =>
+          simplifyLine(line, 90),
+        );
+
+        lines.forEach((line, lineIndex) => {
+          if (!line || line.length < 2) return;
+
+          for (let index = 0; index < line.length - 1; index += 1) {
+            const a = line[index];
+            const b = line[index + 1];
+
+            const routeMultiplier =
+              0.92 +
+              0.14 * (index / Math.max(1, line.length - 2));
+
+            const localMultiplier =
+              0.98 +
+              0.025 * Math.sin((index + lineIndex * 17) * 0.8);
+
+            const flow =
+              currentFlow *
+              routeMultiplier *
+              localMultiplier;
+
+            const height = heightForFlow(flow);
+            const colour = colourForFlow(flow);
+
+            const bottomA = [a[0], a[1], 0];
+            const bottomB = [b[0], b[1], 0];
+            const topA = [a[0], a[1], height];
+            const topB = [b[0], b[1], height];
+
+            walls.push({
+              kind: "wall",
+              polygon: [bottomA, bottomB, topB, topA],
+              bottomA,
+              bottomB,
+              topA,
+              topB,
+              colour,
+              flow,
+              height,
+              river: state.river.name,
+            });
+          }
+        });
+
+        return walls;
+      }
+
+      function htmlTooltip({ object }) {
+        if (!object) return null;
+
+        if (object.kind === "station") {
+          const stationName =
+            object.name ||
+            object.label ||
+            object.stationName ||
+            "FOEN hydrometric station";
+
+          const watercourse =
+            object.gewaesser ||
+            object.watercourse ||
+            object.river ||
+            "";
+
+          return {
+            html: `
+              <strong>${escapeHtml(stationName)}</strong>
+              ${
+                watercourse
+                  ? `<br /><span>${escapeHtml(watercourse)}</span>`
+                  : ""
+              }
+              <br /><small>FOEN monitoring station</small>
+            `,
+          };
+        }
+
+        if (object.kind === "wall") {
+          return {
+            html: `
+              <strong>${escapeHtml(object.river)}</strong>
+              <br />estimated flow: ${formatNumber(object.flow)} m³/s
+              <br />wall height: ${formatNumber(object.height)} m
+            `,
+          };
+        }
+
+        return null;
+      }
+
+      function redraw() {
+        if (!overlay) return;
+
+        const walls = buildWallData();
+
+        const layers = [];
+
+        if (state.catchment) {
+          layers.push(
+            new GeoJsonLayer({
+              id: "selected-catchment",
+              data: state.catchment,
+              filled: true,
+              stroked: true,
+              pickable: false,
+              getFillColor: [55, 126, 145, 48],
+              getLineColor: [91, 211, 190, 155],
+              getLineWidth: 1.5,
+              lineWidthUnits: "pixels",
+            }),
+          );
+        }
+
+        if (state.features.length) {
+          layers.push(
+            new GeoJsonLayer({
+              id: "river-underlay",
+              data: {
+                type: "FeatureCollection",
+                features: state.features,
+              },
+              filled: false,
+              stroked: true,
+              pickable: false,
+              getLineColor: [52, 154, 157, 100],
+              getLineWidth: 2,
+              lineWidthUnits: "pixels",
+            }),
+          );
+        }
+
+        if (walls.length) {
+          layers.push(
+            new PolygonLayer({
+              id: "river-walls",
+              data: walls,
+              pickable: true,
+              filled: true,
+              stroked: false,
+              extruded: false,
+              getPolygon: (object) => object.polygon,
+              getFillColor: (object) => object.colour,
+            }),
+          );
+
+          layers.push(
+            new LineLayer({
+              id: "river-wall-tops",
+              data: walls,
+              pickable: true,
+              getSourcePosition: (object) => object.topA,
+              getTargetPosition: (object) => object.topB,
+              getColor: [188, 255, 238, 235],
+              getWidth: 2.5,
+              widthUnits: "pixels",
+              rounded: true,
+            }),
+          );
+
+          layers.push(
+            new LineLayer({
+              id: "river-wall-bases",
+              data: walls,
+              pickable: false,
+              getSourcePosition: (object) => object.bottomA,
+              getTargetPosition: (object) => object.bottomB,
+              getColor: [37, 119, 131, 115],
+              getWidth: 1,
+              widthUnits: "pixels",
+            }),
+          );
+        }
+
+        if (state.stations.length) {
+          layers.push(
+            new ScatterplotLayer({
+              id: "foen-stations",
+              data: state.stations,
+              pickable: true,
+              radiusUnits: "pixels",
+              getPosition: (object) => object.position,
+              getRadius: 4.5,
+              getFillColor: [255, 208, 102, 210],
+              getLineColor: [255, 244, 190, 220],
+              getLineWidth: 1,
+              lineWidthUnits: "pixels",
+            }),
+          );
+        }
+
+        if (state.point) {
+          layers.push(
+            new ScatterplotLayer({
+              id: "selected-point",
+              data: [{ position: state.point }],
+              pickable: false,
+              radiusUnits: "pixels",
+              getPosition: (object) => object.position,
+              getRadius: 6,
+              getFillColor: [255, 255, 255, 220],
+              getLineColor: [101, 234, 210, 255],
+              getLineWidth: 2,
+              lineWidthUnits: "pixels",
+            }),
+          );
+        }
+
+        overlay.setProps({
+          layers,
+          getTooltip: htmlTooltip,
+        });
+      }
+
+      function updatePanel() {
+        const flow = seasonalFlow();
+
+        dateValue.textContent = formatDate(state.phase);
+        phaseInput.value = state.phase;
+
+        flowValue.textContent = state.river
+          ? `${formatNumber(flow)} m³/s`
+          : "—";
+
+        reachValue.textContent = state.features.length
+          ? formatNumber(state.features.length)
+          : "—";
+
+        catchmentValue.textContent = state.catchment
+          ? "40 km²"
+          : "—";
+
+        stationValue.textContent = state.stations.length
+          ? formatNumber(state.stations.length)
+          : "—";
+
+        if (state.river) {
+          riverMeta.innerHTML = `
+            <strong>${escapeHtml(state.river.name)}</strong>
+            <br />
+            ${escapeHtml(state.river.region)} · seasonal simulation
+          `;
+        }
+      }
+
+      async function loadRiver(rawName) {
+        const name = String(rawName || "").trim();
+
+        if (!name) {
+          setStatus("Enter a river name.", "error");
+          return;
+        }
+
+        const requestId = ++loadSequence;
+        const metadata = selectedRiverMetadata(name);
+
+        state.river = metadata;
+        state.features = [];
+        state.catchment = null;
+        state.point = null;
+
+        updatePanel();
+        redraw();
+
+        setStatus(`Loading ${metadata.name} from GeoAdmin…`, "loading");
+
+        try {
+          const features = await fetchRiverGeometry(metadata);
+
+          if (requestId !== loadSequence) return;
+
+          if (!features.length) {
+            throw new Error(
+              `No named river geometry found for "${metadata.query}".`,
+            );
+          }
+
+          state.features = features;
+          state.point = representativePoint(
+            features,
+            metadata.hint,
+          );
+
+          updatePanel();
+          redraw();
+
+          const bounds = boundsForFeatures(features);
+
+          if (bounds) {
+            map.fitBounds(bounds, {
+              padding: {
+                top: 90,
+                right: 80,
+                bottom: 90,
+                left: 405,
+              },
+              maxZoom: 10,
+              duration: 900,
+            });
+          }
+
+          setStatus(
+            `${metadata.name}: ${features.length} named reach features loaded. Finding sub-catchment…`,
+            "loading",
+          );
+
+          try {
+            state.catchment = await fetchCatchment(state.point);
+          } catch (catchmentError) {
+            console.warn("Catchment lookup failed", catchmentError);
+            state.catchment = null;
+          }
+
+          if (requestId !== loadSequence) return;
+
+          updatePanel();
+          redraw();
+
+          setStatus(
+            state.catchment
+              ? `${metadata.name} loaded · sub-catchment highlighted.`
+              : `${metadata.name} loaded · no sub-catchment returned.`,
+          );
+        } catch (error) {
+          console.error(error);
+          state.features = [];
+          state.catchment = null;
+          state.point = null;
+          updatePanel();
+          redraw();
+
+          setStatus(error.message || "Unable to load river.", "error");
+        }
+      }
+
+      function resetView() {
+        if (state.features.length) {
+          const bounds = boundsForFeatures(state.features);
+
+          if (bounds) {
+            map.fitBounds(bounds, {
+              padding: {
+                top: 90,
+                right: 80,
+                bottom: 90,
+                left: 405,
+              },
+              maxZoom: 10,
+              duration: 800,
+            });
+          }
+        } else {
+          map.flyTo({
+            center: [8.23, 46.8],
+            zoom: 7.2,
+            pitch: 55,
+            bearing: -8,
+            duration: 800,
+          });
+        }
+      }
+
+      function animationLoop(now) {
+        const elapsed = now - lastFrameTime;
+        lastFrameTime = now;
+
+        if (state.playing) {
+          /*
+           * One simulated year takes approximately 90 seconds.
+           */
+          state.phase = (state.phase + elapsed / 90_000) % 1;
+        }
+
+        if (now - lastDrawTime > 45) {
+          updatePanel();
+          redraw();
+          lastDrawTime = now;
+        }
+
+        requestAnimationFrame(animationLoop);
+      }
+
+      const mapStyle = {
+        version: 8,
+        sources: {
+          carto: {
+            type: "raster",
+            tiles: [
+              "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+              "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+              "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+            ],
+            tileSize: 256,
+            attribution:
+              "© OpenStreetMap contributors © CARTO",
+          },
+        },
+        layers: [
+          {
+            id: "carto-background",
+            type: "raster",
+            source: "carto",
+            paint: {
+              "raster-opacity": 0.58,
+              "raster-saturation": -0.6,
+              "raster-contrast": 0.1,
+            },
+          },
+        ],
+      };
+
+      const map = new maplibregl.Map({
+        container: "map",
+        style: mapStyle,
+        center: [8.23, 46.8],
+        zoom: 7.2,
+        pitch: 55,
+        bearing: -8,
+        antialias: true,
+        attributionControl: true,
+      });
+
+      map.addControl(
+        new maplibregl.NavigationControl({
+          visualizePitch: true,
+        }),
+        "bottom-right",
+      );
+
+      map.on("load", async () => {
+        overlay = new MapboxOverlay({
+          interleaved: false,
+          layers: [],
+        });
+
+        map.addControl(overlay, "top-right");
+
+        setStatus("Loading FOEN station locations…", "loading");
+
+        try {
+          state.stations = await fetchStations();
+        } catch (error) {
+          console.warn("Station lookup failed", error);
+          state.stations = [];
+        }
+
+        updatePanel();
+        redraw();
+
+        await loadRiver("Aare");
+
+        requestAnimationFrame(animationLoop);
+      });
+
+      loadButton.addEventListener("click", () => {
+        loadRiver(riverInput.value);
+      });
+
+      riverInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          loadRiver(riverInput.value);
+        }
+      });
+
+      phaseInput.addEventListener("input", (event) => {
+        state.phase = Number(event.target.value);
+        updatePanel();
+        redraw();
+      });
+
+      playButton.addEventListener("click", () => {
+        state.playing = !state.playing;
+        playButton.textContent = state.playing ? "Pause" : "Play";
+      });
+
+      resetButton.addEventListener("click", resetView);
+    </script>
+  </body>
 </html>
