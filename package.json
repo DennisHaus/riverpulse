@@ -1,0 +1,33 @@
+{
+  "name": "swiss-river-pulse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interactive Swiss river, watershed and hydrology visualisation",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "data:download": "tsx scripts/download-data.ts",
+    "data:build": "tsx scripts/build-data.ts",
+    "data:prepare": "npm run data:download && npm run data:build"
+  },
+  "dependencies": {
+    "@deck.gl/core": "9.4.0",
+    "@deck.gl/layers": "9.4.0",
+    "@deck.gl/mapbox": "9.4.0",
+    "@turf/turf": "7.2.0",
+    "maplibre-gl": "6.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.0",
+    "tsx": "4.20.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
