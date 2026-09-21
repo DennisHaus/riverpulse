@@ -20,6 +20,9 @@
     "@deck.gl/mapbox": "9.4.0",
     "@turf/turf": "7.2.0",
     "maplibre-gl": "6.10.0"
+    "@here/quantized-mesh-decoder": "1.2.8",
+    "maplibre-gl": "6.10.0",
+    "maplibre-gl-3dtiles-terrain": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

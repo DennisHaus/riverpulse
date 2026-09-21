@@ -1,6 +1,13 @@
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import decode from "@here/quantized-mesh-decoder";
+
+import {
+  loadQuantizedMeshDataset,
+  registerQuantizedMeshTerrain,
+} from "maplibre-gl-3dtiles-terrain";
+
 type Position = [number, number];
 
 type GeoJsonGeometry = {
@@ -695,30 +702,70 @@ function setHydrographyVisibility(
   );
 }
 
+const swissTerrainDataset =
+  await loadQuantizedMeshDataset(
+    "https://3d.geo.admin.ch/ch.swisstopo.terrain.3d/v1/layer.json",
+    {
+      attribution: "Terrain: © swisstopo",
+
+      /*
+       * swisstopo's terrain metadata does not currently
+       * contain a complete availability list, so we provide
+       * the approximate Swiss coverage manually.
+       */
+      boundsOverride: {
+        west: 5.6,
+        south: 45.5,
+        east: 11.0,
+        north: 48.2,
+      },
+
+      maxZoom: 14,
+    },
+  );
+
+const { sourceSpec: swissTerrainSource } =
+  registerQuantizedMeshTerrain(maplibregl, {
+    dataset: swissTerrainDataset,
+    decode,
+  });
+
 const map = new maplibregl.Map({
   container: "map",
 
   style: {
-    version: 8,
+  version: 8,
 
-    sources: {
-      basemap: {
-        type: "raster",
-        tiles: [
-          "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",
-        ],
-        tileSize: 256,
-        attribution: "© swisstopo",
-      },
+  sources: {
+    hydrography: {
+      type: "raster",
+      tiles: [
+        "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swisstlm3d-gewaessernetz/default/current/3857/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+      attribution: "© swisstopo",
+    },
+  },
 
-      hydrography: {
-        type: "raster",
-        tiles: [
-          "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swisstlm3d-gewaessernetz/default/current/3857/{z}/{x}/{y}.png",
-        ],
-        tileSize: 256,
-        attribution: "© swisstopo",
+  layers: [
+    {
+      id: "dark-background",
+      type: "background",
+      paint: {
+        "background-color": "#07181d",
       },
+    },
+
+    {
+      id: "hydrography",
+      type: "raster",
+      source: "hydrography",
+      paint: {
+        "raster-opacity": 0.42,
+      },
+    },
+  ],
+},
     },
 
     layers: [
@@ -744,11 +791,15 @@ const map = new maplibregl.Map({
     ],
   },
 
-  center: [8.23, 46.8],
-  zoom: 7.25,
-  pitch: 52,
-  bearing: -8,
+  center: [8.23, 46.75],
+zoom: 7.35,
+pitch: 62,
+bearing: -12,
+maxPitch: 85,
+antialias: true,
+canvasContextAttributes: {
   antialias: true,
+},
 });
 
 map.addControl(
@@ -760,6 +811,46 @@ map.addControl(
 
 map.on("load", async () => {
   mapLoadingElement.style.display = "none";
+
+  /*
+   * Add the 3D Swiss terrain.
+   */
+  map.addSource(
+    "swiss-terrain",
+    swissTerrainSource as any,
+  );
+
+  map.setTerrain({
+    source: "swiss-terrain",
+    exaggeration: 1.35,
+  });
+
+  /*
+   * Use a second terrain source for hillshading.
+   * This avoids terrain and hillshade competing for
+   * the same tile cache.
+   */
+  map.addSource(
+    "swiss-terrain-hillshade",
+    {
+      ...(swissTerrainSource as any),
+    },
+  );
+
+  map.addLayer(
+    {
+      id: "swiss-terrain-hillshade",
+      type: "hillshade",
+      source: "swiss-terrain-hillshade",
+      paint: {
+        "hillshade-exaggeration": 0.65,
+        "hillshade-shadow-color": "#142f34",
+        "hillshade-highlight-color": "#93c9b8",
+        "hillshade-accent-color": "#426e6b",
+      },
+    },
+    "hydrography",
+  );
 
   map.addSource("selected-river", {
     type: "geojson",
