@@ -18,6 +18,8 @@ Was die App zeigt:
 ## Einrichten
 
 1. Neues Repository auf GitHub anlegen und den Inhalt dieses Ordners hochladen.
+   Die Web-App besteht aus genau vier Dateien: `index.html`, `app.js`, `style.css`, `config.js`.
+   Sie dürfen im Ordner `site/` oder direkt im Hauptordner liegen.
    Das Repository muss **öffentlich** sein (GitHub Pages ist sonst kostenpflichtig, und die
    Niederschlagsdaten werden über `raw.githubusercontent.com` gelesen).
 2. Unter **Settings → Pages** als Quelle **GitHub Actions** wählen.
@@ -142,10 +144,9 @@ pipeline/                     Aufbereitung in Python
   live_meteo.py               Niederschlag (alle 30 Min.)
   make_demo_data.py           Demodaten für die Vorschau
 site/                         die Web-App (statisch, wird so veröffentlicht)
-  index.html, style.css       Seite und Gestaltung
-  app.js                      gesamte App-Logik in einer Datei
+  index.html, style.css       Seite und Gestaltung (Leaflet-CSS ist eingebettet)
+  app.js                      gesamte App inkl. three.js und Leaflet in einer Datei
   config.js                   Einstellungen
-  vendor/                     three.js und Leaflet (lokal, ohne CDN)
 src/                          Quellmodule, aus denen app.js gebaut wird
 .github/workflows/            Aufbereiten, Veröffentlichen, Niederschlag
 ```
@@ -154,7 +155,8 @@ src/                          Quellmodule, aus denen app.js gebaut wird
 in `app.js` gemacht werden. Wer lieber in `src/` arbeitet, baut danach neu:
 
 ```bash
-npx esbuild src/main.js --bundle --format=esm --external:three --outfile=site/app.js
+npm install three@0.160.0 leaflet@1.9.4 esbuild
+npx esbuild src/main.js --bundle --format=esm --target=es2019,safari13 --minify --outfile=site/app.js
 ```
 
 Die aufbereiteten Daten liegen nicht im Repository, sondern als Release-Datei

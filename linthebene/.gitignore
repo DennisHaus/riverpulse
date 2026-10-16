@@ -1,8 +1,0 @@
-.cache/
-build/
-live/
-__pycache__/
-*.pyc
-data.tar.gz
-# Aufbereitete Daten kommen als Release-Datei, nicht ins Repository
-site/data/
