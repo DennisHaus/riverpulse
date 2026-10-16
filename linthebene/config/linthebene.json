@@ -1,0 +1,52 @@
+{
+  "title": "Linthebene",
+  "bbox_wgs84": [8.92, 47.07, 9.13, 47.24],
+
+  "reaches": [
+    {
+      "id": "linthkanal",
+      "name": "Linthkanal",
+      "description": "Walensee (Weesen) bis Zürichsee (Obersee)",
+      "osm_name_regex": "^Linthkanal$",
+      "river_regex": "Linth",
+      "lake_regex": "Walensee|Zürichsee|Obersee"
+    },
+    {
+      "id": "escherkanal",
+      "name": "Escherkanal",
+      "description": "Mollis bis Walensee",
+      "osm_name_regex": "^Escherkanal$",
+      "river_regex": "Linth",
+      "lake_regex": "Walensee"
+    }
+  ],
+
+  "profiles": {
+    "spacing_m": 50,
+    "half_width_m": 300,
+    "step_m": 1.0,
+    "channel_search_m": 20
+  },
+
+  "pointcloud": {
+    "corridor_half_width_m": 250,
+    "subtile_m": 250,
+    "levels_voxel_m": [8, 4, 2, 1],
+    "drop_classes": [7, 18],
+    "colorize_from_ortho": "auto"
+  },
+
+  "stations": {
+    "river_buffer_m": 1500,
+    "lake_snap_m": 15000,
+    "include": [],
+    "exclude": []
+  },
+
+  "meteo": {
+    "radius_km": 25,
+    "days": 30,
+    "collections": ["ch.meteoschweiz.ogd-smn", "ch.meteoschweiz.ogd-smn-precip"],
+    "max_stations": 8
+  }
+}

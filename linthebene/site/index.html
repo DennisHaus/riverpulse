@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linthebene: Pegel und Gelände</title>
+  <meta name="description" content="Live-Pegel, Niederschlag und Querprofile der Linthebene auf Basis von swisstopo-, BAFU- und MeteoSchweiz-Daten.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 20h24' stroke='%231C6E8C' stroke-width='3'/><path d='M10 12h12l-6 7z' fill='%231C6E8C'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <h1 id="title">Linthebene</h1>
+      <p class="sub"><span id="built">Daten werden geladen</span><span id="demo-flag" class="demo" hidden>Demodaten</span></p>
+    </div>
+    <div class="clock" role="group" aria-label="Zeitpunkt">
+      <div class="clock-read">
+        <span id="time-mode" class="mode">Live-Stand</span>
+        <output id="time-label" for="time">–</output>
+      </div>
+      <input id="time" type="range" aria-label="Zeitpunkt wählen">
+      <div class="clock-buttons">
+        <button id="btn-live" type="button" aria-pressed="true">Live</button>
+        <button id="btn-play" type="button" aria-pressed="false">Abspielen</button>
+        <label class="select">
+          <span class="visually-hidden">Zeitraum</span>
+          <select id="range-days">
+            <option value="7">7 Tage</option>
+            <option value="30">30 Tage</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <div id="notice" class="notice" role="status" hidden></div>
+
+  <main class="layout">
+    <aside class="panel left" aria-label="Messstationen">
+      <section>
+        <h2>Pegel und Abfluss</h2>
+        <div id="station-list" class="list"></div>
+        <p class="source">BAFU, Hydrologische Beobachtungen. Live-Werte sind ungeprüft.</p>
+      </section>
+      <section>
+        <h2>Niederschlag</h2>
+        <div id="meteo-list" class="list"></div>
+      </section>
+    </aside>
+
+    <section class="stage" aria-label="Karte und 3D-Modell">
+      <div class="stage-bar">
+        <div class="seg" role="group" aria-label="Ansicht">
+          <button type="button" data-view="map" aria-pressed="true">2D-Plan</button>
+          <button type="button" data-view="3d" aria-pressed="false">3D-Modell</button>
+        </div>
+        <div id="legend2d" class="legend">
+          <span><i class="fb ok"></i>Freibord über 1 m</span>
+          <span><i class="fb warn"></i>unter 1 m</span>
+          <span><i class="fb crit"></i>unter 30 cm</span>
+          <span><i class="fb over"></i>über Uferkrone</span>
+        </div>
+        <span id="pc-stats" class="stats"></span>
+      </div>
+      <div id="tools3d" class="tools" hidden>
+        <div class="seg" role="group" aria-label="Einfärbung der Punktwolke">
+          <button type="button" data-mode="0" aria-pressed="true">Orthofoto</button>
+          <button type="button" data-mode="1" aria-pressed="false">Klassen</button>
+          <button type="button" data-mode="2" aria-pressed="false">Intensität</button>
+          <button type="button" data-mode="3" aria-pressed="false">Höhe</button>
+        </div>
+        <label class="slider">Punktgrösse <input id="pt-size" type="range" min="0.4" max="2.5" step="0.1" value="1"></label>
+        <label class="slider">Überhöhung <input id="exag" type="range" min="1" max="6" step="0.5" value="2"> <output id="exag-out">2×</output></label>
+        <button id="btn-home" type="button" class="ghost">Ganze Ebene zeigen</button>
+        <div id="class-legend" class="class-legend" hidden></div>
+      </div>
+      <div id="map" class="view"></div>
+      <div id="three" class="view" hidden></div>
+    </section>
+
+    <aside class="panel right" aria-label="Gewähltes Querprofil">
+      <div id="details"></div>
+    </aside>
+
+    <section class="profiles" aria-label="Querprofil und Längenprofil">
+      <div class="profiles-bar">
+        <label class="select">
+          <span class="visually-hidden">Abschnitt</span>
+          <select id="reach"></select>
+        </label>
+        <div class="stepper">
+          <button id="prev" type="button" aria-label="Profil flussaufwärts">‹</button>
+          <span id="prof-label">–</span>
+          <button id="next" type="button" aria-label="Profil flussabwärts">›</button>
+        </div>
+        <div class="seg" role="group" aria-label="Ausschnitt">
+          <button type="button" data-zoom="channel" aria-pressed="true">Gerinne</button>
+          <button type="button" data-zoom="full" aria-pressed="false">Ganzes Profil</button>
+        </div>
+        <label class="check"><input id="opt-dsm" type="checkbox" checked> Bäume und Bauten</label>
+        <p class="key">
+          <span><i class="k earth"></i>Gelände</span>
+          <span><i class="k veg"></i>Oberfläche</span>
+          <span><i class="k bed"></i>Sohle BAFU</span>
+          <span><i class="k water"></i>Wasserspiegel</span>
+        </p>
+      </div>
+      <canvas id="section" aria-label="Querprofil"></canvas>
+      <canvas id="long" aria-label="Längenprofil, klicken um ein Profil zu wählen"></canvas>
+    </section>
+  </main>
+
+  <footer class="foot">
+    Daten: swisstopo (swissSURFACE3D, swissALTI3D, SWISSIMAGE), BAFU (Hydrologie, Flussvermessung), MeteoSchweiz, OpenStreetMap.
+    Wasserflächen sind eine statische Näherung aus Pegeln und Gelände, kein hydraulisches Modell.
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

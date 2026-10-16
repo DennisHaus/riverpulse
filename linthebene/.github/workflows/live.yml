@@ -1,0 +1,41 @@
+name: Niederschlag aktualisieren
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-data
+  cancel-in-progress: true
+
+jobs:
+  meteo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install requests pyproj
+
+      - name: Niederschlag von MeteoSchweiz holen
+        run: python pipeline/live_meteo.py --config config/linthebene.json --out live
+
+      # Eigener Branch ohne Verlauf: jede Aktualisierung ersetzt die vorherige,
+      # das Repository wächst dadurch nicht.
+      - name: Auf Branch live-data veröffentlichen
+        run: |
+          cd live
+          git init -q -b live-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Niederschlag $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" live-data

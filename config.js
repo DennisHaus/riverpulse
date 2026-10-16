@@ -12,5 +12,5 @@ window.LINTH_CONFIG = {
   historyDays: 7,
 
   // Maximale Anzahl gleichzeitig geladener Punkte in der 3D-Ansicht
-  pointBudget: 8_000_000,
+  pointBudget: 8000000,
 };
